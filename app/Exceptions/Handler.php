@@ -3,6 +3,9 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -31,9 +34,7 @@ class Handler extends ExceptionHandler
      * @var array<int, string>
      */
     protected $dontFlash = [
-        'current_password',
         'password',
-        'password_confirmation',
     ];
 
     /**
@@ -45,6 +46,32 @@ class Handler extends ExceptionHandler
     {
         $this->reportable(function (Throwable $e) {
             //
+        });
+
+        $this->renderable(function (NotFoundHttpException $e, $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'code' => 'NOT_FOUND',
+                    'message' => 'Resource not found',
+                    'status' => 404
+                ], 404);
+            }
+        });
+
+        $this->renderable(function (AccessDeniedHttpException $e, $request) {
+            return response()->json([
+                'code' => 'FORBIDDEN',
+                'message' => 'Forbidden access',
+                'status' => 403
+            ], 403);
+        });
+
+        $this->renderable(function (ThrottleRequestsException $e, $request) {
+            return response()->json([
+                'code' => 'TOO_MANY_ATTEMPTS',
+                'message' => 'Too many attempts',
+                'status' => 429
+            ], 429);
         });
     }
 }
